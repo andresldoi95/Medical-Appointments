@@ -24,7 +24,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(row, index) in rows" :key="index">
+            <tr v-for="(row, index) in paginatedRows(filteredRows)" :key="index">
               <template v-for="column in columns" :key="column.value">
                 <td v-if="!column.hidden">
                   {{ row[column.value] }}
@@ -44,8 +44,19 @@
           </tfoot>
         </v-table>
         <div class="d-flex flex-wrap mt-2">
-
-          <v-pagination :length="totalPages"></v-pagination>
+          <p class="mt-4"><strong>Rows per page:</strong></p>
+          <div class="w-auto">
+            <v-select
+              v-model="rowsPerPage"
+              :items="rowsPerPageOptions"
+              class="mx-4"
+            ></v-select>
+          </div>
+          <v-pagination
+            :totalVisible="totalVisible"
+            v-model="currentPage"
+            :length="totalPages"
+          ></v-pagination>
           <p class="mt-4"><strong>Total pages:</strong> {{ totalPages }}</p>
         </div>
       </v-col>
@@ -54,7 +65,7 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, computed } from "vue";
 
 const search = ref("");
 
@@ -83,6 +94,38 @@ const props = defineProps({
       return [];
     },
   },
+  rowsPerPageOptions: {
+    type: Array,
+    required: false,
+    default: function () {
+      return [5, 10, 25, 50, 100];
+    },
+  },
+  defaultRowsPerPage: {
+    type: Number,
+    required: false,
+    default: 5,
+  },
+  serverSide: {
+    type: Boolean,
+    required: false,
+    default: false,
+  },
+  urlServer: {
+    type: String,
+    required: false,
+    default: "",
+  },
+  paginate: {
+    type: Boolean,
+    required: false,
+    default: false,
+  },
+  totalVisible: {
+    type: Number,
+    required: false,
+    default: 5
+  }
 });
 
 const rows = ref(props.data);
@@ -90,4 +133,44 @@ const rows = ref(props.data);
 const totalPages = ref(1);
 
 const currentPage = ref(1);
+
+const rowsPerPage = ref(props.defaultRowsPerPage);
+
+const paginatedRows = (rows) => {
+  if (props.paginate && !props.serverSide) {
+    const pages = rows.length / rowsPerPage.value;
+    let intPart = parseInt(pages);
+    const difference = pages - intPart;
+    if (difference > 0)
+      intPart += 1;
+    if (totalPages.value !== intPart) {
+      totalPages.value = intPart;
+    }
+    if (currentPage.value > totalPages.value) {
+      currentPage.value = 1;
+    }
+    let start = (currentPage.value - 1) * rowsPerPage.value;
+    let end = start + rowsPerPage.value;
+    return rows.slice(start, end);
+  }
+  else
+    return filteredRows.value;
+};
+
+const filteredRows = computed(() => {
+  if (props.searchable && search.value !== "") {
+    const expresion = new RegExp(`${search.value}.*`, "i");
+    const filters = props.columns.filter((column) => column.searchable);
+    return rows.value.filter((row) => {
+      for (const filter in filters) {
+        if (expresion.test(row[filters[filter].value]))
+          return true;
+      }
+      return false;
+    });
+  }
+  else {
+    return rows.value;
+  }
+});
 </script>
