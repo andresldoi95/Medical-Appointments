@@ -7,11 +7,13 @@
       sortBy="last_name"
       endpoint="patients"
       @create="createPatient"
+      ref="patientsTable"
     ></DataTable>
   </v-container>
   <patient-form
     @close="openedPatientForm = false"
     v-model="openedPatientForm"
+    @created="createdPatient"
   ></patient-form>
 </template>
 
@@ -48,9 +50,16 @@ const patientsColumns = ref([
   },
 ]);
 
+const patientsTable = ref(null);
+
 const openedPatientForm = ref(false);
 
 const createPatient = () => {
   openedPatientForm.value = true;
+};
+
+const createdPatient = () => {
+  patientsTable.value.searchData();
+  openedPatientForm.value = false;
 };
 </script>

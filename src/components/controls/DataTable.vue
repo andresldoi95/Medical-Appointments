@@ -65,13 +65,11 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
-import { useTeamStore } from '@/store/team';
-import axios from '@/http/oauth2-axios';
+import { ref, computed, watch } from "vue";
+import { useTeamStore } from "@/store/team";
+import axios from "@/http/oauth2-axios";
 
-const emit = defineEmits([
-  'create', 'edit', 'destroy'
-]);
+const emit = defineEmits(["create", "edit", "destroy"]);
 
 const search = ref("");
 
@@ -130,23 +128,23 @@ const props = defineProps({
   totalVisible: {
     type: Number,
     required: false,
-    default: 5
+    default: 5,
   },
   endpoint: {
     type: String,
     required: false,
-    default: ''
+    default: "",
   },
   sortBy: {
     type: String,
     required: false,
-    default: ''
+    default: "",
   },
   sortOrder: {
     type: String,
     required: false,
-    default: 'asc'
-  }
+    default: "asc",
+  },
 });
 
 const rows = ref(props.data);
@@ -166,8 +164,7 @@ const paginatedRows = (rows) => {
     const pages = rows.length / rowsPerPage.value;
     let intPart = parseInt(pages);
     const difference = pages - intPart;
-    if (difference > 0)
-      intPart += 1;
+    if (difference > 0) intPart += 1;
     if (totalPages.value !== intPart) {
       totalPages.value = intPart;
     }
@@ -177,9 +174,7 @@ const paginatedRows = (rows) => {
     let start = (currentPage.value - 1) * rowsPerPage.value;
     let end = start + rowsPerPage.value;
     return rows.slice(start, end);
-  }
-  else
-    return filteredRows.value;
+  } else return filteredRows.value;
 };
 
 const filteredRows = computed(() => {
@@ -188,13 +183,11 @@ const filteredRows = computed(() => {
     const filters = props.columns.filter((column) => column.searchable);
     return rows.value.filter((row) => {
       for (const filter in filters) {
-        if (expresion.test(row[filters[filter].value]))
-          return true;
+        if (expresion.test(row[filters[filter].value])) return true;
       }
       return false;
     });
-  }
-  else {
+  } else {
     return rows.value;
   }
 });
@@ -204,21 +197,27 @@ const urlOauth2 = import.meta.env.VITE_OAUTH2_API;
 const teamStore = useTeamStore();
 
 const searchData = () => {
-  axios.get(urlOauth2 + '/' + props.endpoint, {
-    params: {
-      page: currentPage.value,
-      per_page: rowsPerPage.value,
-      sort_by: sortBy.value,
-      sort_order: sortOrder.value,
-      team_id: teamStore.currentTeamId
-    }
-  }).then(({data}) => {
-    rows.value = data.data;
-    totalPages.value = data.total;
-    currentPage.value = data.current_page;
-  });
-}
+  axios
+    .get(urlOauth2 + "/" + props.endpoint, {
+      params: {
+        page: currentPage.value,
+        per_page: rowsPerPage.value,
+        sort_by: sortBy.value,
+        sort_order: sortOrder.value,
+        team_id: teamStore.currentTeamId,
+      },
+    })
+    .then(({ data }) => {
+      rows.value = data.data;
+      totalPages.value = data.last_page;
+      currentPage.value = data.current_page;
+    });
+};
 if (props.serverSide) {
   searchData();
 }
+
+watch(currentPage, () => {
+  searchData();
+});
 </script>
