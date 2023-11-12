@@ -1,7 +1,7 @@
 <template>
-  <v-container class="fill-height"><Patients /></v-container>
+  <v-container class="fill-height"><PatientsList /></v-container>
 </template>
 
 <script setup>
-import Patients from "@/components/patients/Patients.vue";
+import PatientsList from "@/components/patients/PatientsList.vue";
 </script>

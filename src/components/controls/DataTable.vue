@@ -67,7 +67,7 @@
       </v-table>
       <div class="d-flex mt-2 justify-center">
         <p class="mt-4"><strong>Per page:</strong></p>
-        <div class="w-auto">
+        <div>
           <v-select
             v-model="rowsPerPage"
             :items="rowsPerPageOptions"

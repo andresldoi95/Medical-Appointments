@@ -40,17 +40,18 @@
     <v-divider></v-divider>
     <v-list-item
       v-if="teamStore.isSelected"
-      prepend-icon="mdi-calendar-check"
-      link
-      title="Appointments"
-    ></v-list-item>
-    <v-list-item
-      v-if="teamStore.isSelected"
       prepend-icon="mdi-account-injury"
       :active="router.currentRoute.value.name === 'Patients'"
       link
       :to="{ name: 'Patients' }"
       title="Patients"
+    ></v-list-item>
+    <v-list-item
+      v-if="teamStore.isSelected"
+      prepend-icon="mdi-calendar-check"
+      link
+      :to="{ name: 'Appointments' }"
+      title="Appointments"
     ></v-list-item>
   </v-navigation-drawer>
 </template>
