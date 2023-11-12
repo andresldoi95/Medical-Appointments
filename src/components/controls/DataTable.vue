@@ -6,8 +6,8 @@
       </v-col>
       <v-col cols="12" md="4">
         <v-btn-toggle divided variant="outlined">
-          <v-btn v-if="searchable" icon="mdi-magnify"></v-btn>
-          <v-btn v-if="withCreateButton" icon="mdi-plus"></v-btn>
+          <v-btn @click="searchData" v-if="searchable" icon="mdi-magnify"></v-btn>
+          <v-btn @click="emit('create')" v-if="withCreateButton" icon="mdi-plus"></v-btn>
         </v-btn-toggle>
       </v-col>
     </v-row>
@@ -66,6 +66,12 @@
 
 <script setup>
 import { ref, computed } from "vue";
+import { useTeamStore } from '@/store/team';
+import axios from '@/http/oauth2-axios';
+
+const emit = defineEmits([
+  'create', 'edit', 'destroy'
+]);
 
 const search = ref("");
 
@@ -125,6 +131,21 @@ const props = defineProps({
     type: Number,
     required: false,
     default: 5
+  },
+  endpoint: {
+    type: String,
+    required: false,
+    default: ''
+  },
+  sortBy: {
+    type: String,
+    required: false,
+    default: ''
+  },
+  sortOrder: {
+    type: String,
+    required: false,
+    default: 'asc'
   }
 });
 
@@ -135,6 +156,10 @@ const totalPages = ref(1);
 const currentPage = ref(1);
 
 const rowsPerPage = ref(props.defaultRowsPerPage);
+
+const sortBy = ref(props.sortBy);
+
+const sortOrder = ref(props.sortOrder);
 
 const paginatedRows = (rows) => {
   if (props.paginate && !props.serverSide) {
@@ -173,4 +198,27 @@ const filteredRows = computed(() => {
     return rows.value;
   }
 });
+
+const urlOauth2 = import.meta.env.VITE_OAUTH2_API;
+
+const teamStore = useTeamStore();
+
+const searchData = () => {
+  axios.get(urlOauth2 + '/' + props.endpoint, {
+    params: {
+      page: currentPage.value,
+      per_page: rowsPerPage.value,
+      sort_by: sortBy.value,
+      sort_order: sortOrder.value,
+      team_id: teamStore.currentTeamId
+    }
+  }).then(({data}) => {
+    rows.value = data.data;
+    totalPages.value = data.total;
+    currentPage.value = data.current_page;
+  });
+}
+if (props.serverSide) {
+  searchData();
+}
 </script>

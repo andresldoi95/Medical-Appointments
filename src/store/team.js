@@ -18,8 +18,5 @@ export const useTeamStore = defineStore('team', {
     setTeams(teams) {
       this.teams = teams;
     }
-  },
-  getters: {
-
   }
 })
