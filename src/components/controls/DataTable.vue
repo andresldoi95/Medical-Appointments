@@ -1,72 +1,92 @@
 <template>
-  <v-container>
-    <v-row>
-      <v-col v-if="searchable" cols="12" md="8">
-        <v-text-field v-model="search" label="Search"></v-text-field>
-      </v-col>
-      <v-col cols="12" md="4">
-        <v-btn-toggle divided variant="outlined">
-          <v-btn @click="searchData" v-if="searchable" icon="mdi-magnify"></v-btn>
-          <v-btn @click="emit('create')" v-if="withCreateButton" icon="mdi-plus"></v-btn>
-        </v-btn-toggle>
-      </v-col>
-    </v-row>
-    <v-row>
-      <v-col cols="12">
-        <v-table>
-          <thead>
-            <tr>
-              <template v-for="column in columns" :key="column.value">
-                <th v-if="!column.hidden">
-                  {{ column.title }}
-                </th>
-              </template>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(row, index) in paginatedRows(filteredRows)" :key="index">
-              <template v-for="column in columns" :key="column.value">
-                <td v-if="!column.hidden">
-                  {{ row[column.value] }}
-                </td>
-              </template>
-            </tr>
-          </tbody>
-          <tfoot>
-            <tr v-show="rows.length === 0">
-              <th
-                :colspan="columns.filter((column) => !column.hidden).length"
-                scope="row"
-              >
-                No data found.
+  <v-row class="d-flex justify-center">
+    <v-text-field
+      @keyup.enter="searchDataWithSearch"
+      v-model="search"
+      label="Search"
+    ></v-text-field>
+    <v-btn
+      class="ml-2"
+      @click="searchDataWithSearch"
+      v-if="searchable"
+      icon="mdi-magnify"
+    ></v-btn>
+    <v-btn
+      class="ml-2"
+      @click="emit('create')"
+      v-if="withCreateButton"
+      icon="mdi-plus"
+    ></v-btn>
+  </v-row>
+  <v-row>
+    <v-col cols="12">
+      <v-table>
+        <thead>
+          <tr>
+            <th v-if="withEditButton">Actions</th>
+            <template v-for="column in columns" :key="column.value">
+              <th v-if="!column.hidden">
+                {{ column.title }}
               </th>
-            </tr>
-          </tfoot>
-        </v-table>
-        <div class="d-flex flex-wrap mt-2">
-          <p class="mt-4"><strong>Rows per page:</strong></p>
-          <div class="w-auto">
-            <v-select
-              v-model="rowsPerPage"
-              :items="rowsPerPageOptions"
-              class="mx-4"
-            ></v-select>
-          </div>
-          <v-pagination
-            :totalVisible="totalVisible"
-            v-model="currentPage"
-            :length="totalPages"
-          ></v-pagination>
-          <p class="mt-4"><strong>Total pages:</strong> {{ totalPages }}</p>
+            </template>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            :class="settTrClasses(row, index)"
+            v-for="(row, index) in paginatedRows(filteredRows)"
+            :key="index"
+          >
+            <td v-if="withEditButton">
+              <v-btn
+                @click="emit('edit', row)"
+                density="default"
+                icon="mdi-pencil"
+                class="mr-2"
+              ></v-btn>
+              <v-btn
+                @click="emit('destroy', row)"
+                density="default"
+                :icon="deleteIcon(row, index)"
+              ></v-btn>
+            </td>
+            <template v-for="column in columns" :key="column.value">
+              <td v-if="!column.hidden">
+                {{ row[column.value] }}
+              </td>
+            </template>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr v-show="rows.length === 0">
+            <th :colspan="columns.filter((column) => !column.hidden).length" scope="row">
+              No data found.
+            </th>
+          </tr>
+        </tfoot>
+      </v-table>
+      <div class="d-flex mt-2 justify-center">
+        <p class="mt-4"><strong>Per page:</strong></p>
+        <div class="w-auto">
+          <v-select
+            v-model="rowsPerPage"
+            :items="rowsPerPageOptions"
+            class="mx-4"
+          ></v-select>
         </div>
-      </v-col>
-    </v-row>
-  </v-container>
+        <v-pagination
+          :totalVisible="totalVisible"
+          v-model="currentPage"
+          :length="totalPages"
+        ></v-pagination>
+        <p class="mt-4"><strong>Pages:</strong> {{ totalPages }}</p>
+      </div>
+    </v-col>
+  </v-row>
 </template>
 
 <script setup>
 import { ref, computed, watch } from "vue";
-import { useTeamStore } from "@/store/team";
 import axios from "@/http/oauth2-axios";
 
 const emit = defineEmits(["create", "edit", "destroy"]);
@@ -80,6 +100,11 @@ const props = defineProps({
     default: true,
   },
   withCreateButton: {
+    type: Boolean,
+    required: false,
+    default: true,
+  },
+  withEditButton: {
     type: Boolean,
     required: false,
     default: true,
@@ -145,6 +170,20 @@ const props = defineProps({
     required: false,
     default: "asc",
   },
+  settTrClasses: {
+    type: Function,
+    required: false,
+    default: function () {
+      return [];
+    },
+  },
+  deleteIcon: {
+    type: Function,
+    required: false,
+    default: function () {
+      return "mdi-trash-can";
+    },
+  },
 });
 
 const rows = ref(props.data);
@@ -178,7 +217,7 @@ const paginatedRows = (rows) => {
 };
 
 const filteredRows = computed(() => {
-  if (props.searchable && search.value !== "") {
+  if (!props.serverSide && props.searchable && search.value !== "") {
     const expresion = new RegExp(`${search.value}.*`, "i");
     const filters = props.columns.filter((column) => column.searchable);
     return rows.value.filter((row) => {
@@ -194,8 +233,6 @@ const filteredRows = computed(() => {
 
 const urlOauth2 = import.meta.env.VITE_OAUTH2_API;
 
-const teamStore = useTeamStore();
-
 const searchData = () => {
   axios
     .get(urlOauth2 + "/" + props.endpoint, {
@@ -204,7 +241,7 @@ const searchData = () => {
         per_page: rowsPerPage.value,
         sort_by: sortBy.value,
         sort_order: sortOrder.value,
-        team_id: teamStore.currentTeamId,
+        search: search.value,
       },
     })
     .then(({ data }) => {
@@ -220,4 +257,23 @@ if (props.serverSide) {
 watch(currentPage, () => {
   searchData();
 });
+
+watch(rowsPerPage, () => {
+  searchData();
+});
+
+defineExpose({
+  searchData,
+});
+
+const searchDataWithSearch = () => {
+  if (props.serverSide) {
+    if (search.value !== "") {
+      if (currentPage.value !== 1) currentPage.value = 1;
+      else searchData();
+    } else {
+      searchData();
+    }
+  }
+};
 </script>

@@ -8,6 +8,7 @@ axios.interceptors.request.use(
     config.headers = {
       Authorization: `Bearer ${token}`,
       Accept: "application/json",
+      'Team-Id': localStorage.getItem("currentTeamId")
     };
     return config;
   },
